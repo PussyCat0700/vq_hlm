@@ -137,10 +137,10 @@ def train(model, args, train_loader, val_loader=None, train_epochs=1, alpha=10, 
 
             opt.step()
             active_percent = indices.unique().numel() / num_codes * 100
-            pbar.set_description(
-                f"rec loss: {rec_loss.item():.3f} | "
-                + f"cmt loss: {cmt_loss.item():.3f} | "
-                + f"active %: {active_percent:.3f}"
+            pbar.set_postfix(
+                rec_loss=f"{rec_loss.item():.3f}",
+                cmt_loss=f"{cmt_loss.item():.3f}",
+                active=f"{active_percent:.3f}"
             )
 
             if writer:
