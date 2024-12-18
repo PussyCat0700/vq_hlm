@@ -2,7 +2,7 @@
 
 set -x
 
-RUN_NAME=1218_BASELINE
+RUN_NAME=1218_NEWLOSS
 MODEL_CONFIG_DIR=./conf/models/vectorquantize.yaml
 DATA_CONFIG_DIR=./conf/data/example.yaml
 OUTPUT_DIR=./exp/$RUN_NAME
