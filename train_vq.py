@@ -50,7 +50,6 @@ def load_checkpoint(model, optimizer, ckpt_path):
 
 def compute_loss(model, x, alpha=10):
     out, indices, cmt_loss = model(x)
-    out = out.clamp(-1., 1.)
     rec_loss = (out - x).abs().mean()
     cmt_loss = cmt_loss.mean()
     total_loss = rec_loss + alpha * cmt_loss
@@ -60,35 +59,35 @@ def evaluate(model, eval_loader, split: str, writer: SummaryWriter = None, step:
     global num_quantizers
     model.to(device)
     model.eval()
-    eval_loss = 0
+    eval_rec_loss = 0
     index_counts = {i: {j: 0 for j in range(num_codes)} for i in range(num_quantizers)}
 
     with torch.no_grad():
         for batch in tqdm(eval_loader, desc=f"Running on {split}"):
             x = batch[KEY_LM_HIDDEN_STATES].to(device)
             rec_loss, cmt_loss, total_loss, indices = compute_loss(model, x)
-            eval_loss += total_loss.item()
+            eval_rec_loss += rec_loss.item()
             for codebook_idx in range(num_quantizers):
                 for sub_indices in indices[..., codebook_idx]:
                     sub_unique_indices = sub_indices.unique().cpu().numpy()
                     for idx in sub_unique_indices:
                         index_counts[codebook_idx][idx] += 1
 
-    eval_loss /= len(eval_loader)
+    eval_rec_loss /= len(eval_loader)
     individual_utilizations = []
     for codebook_idx in range(num_quantizers):
         utilized_indices_in_codebook = sum(1 for count in index_counts[codebook_idx].values() if count > 0)
         individual_utilizations.append(utilized_indices_in_codebook / num_codes * 100)
 
-    logging.info(f"{split} Loss: {eval_loss:.4f}")
+    logging.info(f"{split} Reconstruction Loss: {eval_rec_loss:.4f}")
     for codebook_idx in range(num_quantizers):
         logging.info(f'{split} Active Percentage (Codebook {codebook_idx+1}): {individual_utilizations[codebook_idx]:.4f}')
 
     if writer:
-        writer.add_scalar(f'Loss/{split}', eval_loss, step)
+        writer.add_scalar(f'Loss/{split}', eval_rec_loss, step)
         for codebook_idx in range(num_quantizers):
             writer.add_scalar(f'Active_Codebook_{codebook_idx+1}/{split}', individual_utilizations[codebook_idx], step)
-    return eval_loss, index_counts
+    return eval_rec_loss, index_counts
 
 def save_histogram(args, index_counts):
     global num_quantizers

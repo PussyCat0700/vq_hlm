@@ -28,3 +28,5 @@
 - [24.12.06] 在`train_vq.py`中新增VectorQuantize的例子
 
 - [24.12.08] 新增模型集合文件`models.py`，供同学们参考和替换为自己的模型。
+
+- [24.12.18] 修复reconstruction loss，去除clamp；监测指标变为reconstruction loss。
