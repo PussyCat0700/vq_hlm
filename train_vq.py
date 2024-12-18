@@ -169,7 +169,7 @@ def seed_everything(seed: int):
 
 
 if __name__ == '__main__':
-    seed_everything(seed)
+    # seed_everything(seed)
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_config", default='conf/data/example.yaml')
     parser.add_argument("--model_config", default='conf/models/vectorquantize.yaml')
@@ -183,6 +183,7 @@ if __name__ == '__main__':
     val_dataloader = get_chunked_h5dataloader(config_path=args.data_config, split='validation')
     test_dataloader = get_chunked_h5dataloader(config_path=args.data_config, split='test')
 
+    torch.manual_seed(seed)
     model = get_model(args.model_config)
 
     writer = SummaryWriter(log_dir=os.path.join(args.ckpt_dir, 'logs'))

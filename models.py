@@ -15,7 +15,7 @@ def get_model(vae_config_path):
             kmeans_init=True,
             rotation_trick=True,
             straight_through=False,
-            use_cosine_sim=True,
+            # use_cosine_sim=True,
         )
     elif vae_config['vq_type'] == 'ResidualVQ':
         vqvae = ResidualVQ(
