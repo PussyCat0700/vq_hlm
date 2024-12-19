@@ -8,6 +8,8 @@ import logging
 import os
 from models import get_model
 from utils import load_config
+import random
+import numpy as np
 
 
 logging.basicConfig(
@@ -134,10 +136,10 @@ def train(model, args, train_loader, val_loader=None, train_epochs=1, alpha=10, 
 
             opt.step()
             active_percent = indices.unique().numel() / num_codes * 100
-            pbar.set_description(
-                f"rec loss: {rec_loss.item():.3f} | "
-                + f"cmt loss: {cmt_loss.item():.3f} | "
-                + f"active %: {active_percent:.3f}"
+            pbar.set_postfix(
+                rec_loss=f"{rec_loss.item():.3f}",
+                cmt_loss=f"{cmt_loss.item():.3f}",
+                active=f"{active_percent:.1f}%"
             )
 
             if writer:
@@ -153,7 +155,18 @@ def train(model, args, train_loader, val_loader=None, train_epochs=1, alpha=10, 
 
         save_checkpoint(model, opt, step, os.path.join(args.ckpt_dir, 'latest_checkpoint.pt'))
 
+def seed_everything(seed: int):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = True
+
+
 if __name__ == '__main__':
+    seed_everything(seed)
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_config", default='conf/data/example.yaml')
     parser.add_argument("--model_config", default='conf/models/vectorquantize.yaml')
@@ -167,7 +180,6 @@ if __name__ == '__main__':
     val_dataloader = get_chunked_h5dataloader(config_path=args.data_config, split='validation')
     test_dataloader = get_chunked_h5dataloader(config_path=args.data_config, split='test')
 
-    torch.manual_seed(seed)
     model = get_model(args.model_config)
 
     writer = SummaryWriter(log_dir=os.path.join(args.ckpt_dir, 'logs'))
