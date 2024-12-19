@@ -2,7 +2,7 @@
 
 set -x
 
-RUN_NAME=1219_lowdim_CBDIM32
+RUN_NAME=1219_CBDIM128_EPOCH10
 MODEL_CONFIG_DIR=./conf/models/vectorquantize.yaml
 DATA_CONFIG_DIR=./conf/data/example.yaml
 OUTPUT_DIR=./exp/$RUN_NAME
