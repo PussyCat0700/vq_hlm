@@ -127,7 +127,7 @@ def train(model, args, train_loader, val_loader=None, train_epochs=1, alpha=10, 
     
     for epoch in range(train_epochs):
         logging.info(f"Starting epoch {epoch}")
-        pbar = tqdm(train_loader, desc="Training")
+        pbar = tqdm(train_loader, desc=f"Epoch {epoch}")
         for batch in pbar:
             opt.zero_grad()
             x = batch[KEY_LM_HIDDEN_STATES].to(device)
