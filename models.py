@@ -58,5 +58,18 @@ def get_model(vae_config_path):
             entropy_loss_weight = 0.1,  # how much weight to place on entropy loss
             diversity_gamma = 1.        # within entropy loss, how much weight to give to diversity of codes, taken from https://arxiv.org/abs/1911.05894
         )
+    elif vae_config['vq_type'] == 'LearnableVQ': 
+        vqvae = VectorQuantize(
+            dim=vae_config['embedding_dim'],
+            codebook_dim=vae_config['codebook_dim'],
+            codebook_size=vae_config['codebook_size'],
+            decay=0.8,
+            commitment_weight=1.,
+            kmeans_init=True,
+            rotation_trick=True,
+            straight_through=False,
+            learnable_codebook=True,
+            ema_update=False,
+        )
 
     return vqvae
