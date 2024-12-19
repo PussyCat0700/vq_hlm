@@ -60,7 +60,7 @@ def evaluate(model, eval_loader, split: str, writer: SummaryWriter = None, step:
     model.to(device)
     model.eval()
     eval_rec_loss = 0
-    index_counts = {i: {j: 0 for j in range(num_codes)} for i in range(num_quantizers)}
+    index_counts = {i: torch.zeros(num_codes).int().to(device) for i in range(num_quantizers)}
 
     with torch.no_grad():
         for batch in tqdm(eval_loader, desc=f"Running on {split}"):
@@ -68,15 +68,15 @@ def evaluate(model, eval_loader, split: str, writer: SummaryWriter = None, step:
             rec_loss, cmt_loss, total_loss, indices = compute_loss(model, x)
             eval_rec_loss += rec_loss.item()
             for codebook_idx in range(num_quantizers):
-                for sub_indices in indices[..., codebook_idx]:
-                    sub_unique_indices = sub_indices.unique().cpu().numpy()
-                    for idx in sub_unique_indices:
-                        index_counts[codebook_idx][idx] += 1
+                sub_indices = indices[..., codebook_idx] if num_quantizers > 1 else indices  # [B, T]
+                for indice in sub_indices:
+                    frequency = torch.bincount(indice.flatten(), minlength=num_codes)
+                    index_counts[codebook_idx] += frequency
 
     eval_rec_loss /= len(eval_loader)
     individual_utilizations = []
     for codebook_idx in range(num_quantizers):
-        utilized_indices_in_codebook = sum(1 for count in index_counts[codebook_idx].values() if count > 0)
+        utilized_indices_in_codebook = torch.count_nonzero(index_counts[codebook_idx]).item()
         individual_utilizations.append(utilized_indices_in_codebook / num_codes * 100)
 
     logging.info(f"{split} Reconstruction Loss: {eval_rec_loss:.4f}")
@@ -95,18 +95,16 @@ def save_histogram(args, index_counts):
     import matplotlib.pyplot as plt
     for codebook_idx, index_count in enumerate(index_counts):
         filename = f'index_frequencies_{codebook_idx}'
-        index_count = index_counts[codebook_idx]
+        index_count = index_counts[codebook_idx].tolist()
         with open(os.path.join(args.ckpt_dir, f'{filename}.csv'), mode='w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(['Index', 'Frequency'])  # 写入表头
-            for idx, count in index_count.items():
+            for idx, count in enumerate(index_count):
                 writer.writerow([idx, count])  # 写入每个索引的频次
 
         logging.info(f"Index frequencies saved to '{filename}.csv'")
-        
-        frequencies = list(index_count.values())
 
-        plt.bar(range(num_codes), frequencies, edgecolor='black', alpha=0.7)
+        plt.bar(range(num_codes), index_count, edgecolor='black', alpha=0.7)
         plt.title("Frequency of Codebook Indices (Entire Dataset)")
         plt.xlabel("Codebook Index")
         plt.ylabel("Frequency")
