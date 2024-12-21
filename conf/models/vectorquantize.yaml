@@ -1,4 +1,4 @@
 vq_type: "VectorQuantize"
-codebook_dim: 1024
+codebook_dim: 8
 embedding_dim: 768
 codebook_size: 1024
