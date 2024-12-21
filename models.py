@@ -23,6 +23,11 @@ def get_model(vae_config_path):
             codebook_dim=vae_config['codebook_dim'],
             num_quantizers = vae_config['num_quantizers'],      # specify number of quantizers
             codebook_size = vae_config['codebook_size'],    # codebook size
+            decay=0.8,
+            commitment_weight=1.,
+            kmeans_init=True,
+            rotation_trick=True,
+            straight_through=False,
         )
     elif vae_config['vq_type'] == 'GroupedResidualVQ':  
         vqvae = GroupedResidualVQ(
@@ -60,6 +65,19 @@ def get_model(vae_config_path):
         )
     elif vae_config['vq_type'] == 'LearnableVQ': 
         vqvae = VectorQuantize(
+            dim=vae_config['embedding_dim'],
+            codebook_dim=vae_config['codebook_dim'],
+            codebook_size=vae_config['codebook_size'],
+            decay=0.8,
+            commitment_weight=1.,
+            kmeans_init=True,
+            rotation_trick=True,
+            straight_through=False,
+            learnable_codebook=True,
+            ema_update=False,
+        )
+    elif vae_config['vq_type'] == 'LearnableRVQ': 
+        vqvae = ResidualVQ(
             dim=vae_config['embedding_dim'],
             codebook_dim=vae_config['codebook_dim'],
             codebook_size=vae_config['codebook_size'],
