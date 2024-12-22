@@ -155,6 +155,11 @@ def train(model, args, train_loader, val_loader=None, train_epochs=1, alpha=10, 
                     save_checkpoint(model, opt, step, os.path.join(args.ckpt_dir, 'best_checkpoint.pt'))
 
         save_checkpoint(model, opt, step, os.path.join(args.ckpt_dir, 'latest_checkpoint.pt'))
+        val_loss, _ = evaluate(model, val_loader, "Validation", writer, step)
+        logging.info(f"Validation Loss: {val_loss.item()}")
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            save_checkpoint(model, opt, step, os.path.join(args.ckpt_dir, 'best_checkpoint.pt'))
 
 def seed_everything(seed: int):
     random.seed(seed)
