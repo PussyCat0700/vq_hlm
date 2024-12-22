@@ -149,6 +149,7 @@ def train(model, args, train_loader, val_loader=None, train_epochs=1, alpha=10, 
 
             if val_loader and step % validate_every == 0:
                 val_loss, _ = evaluate(model, val_loader, "Validation", writer, step)
+                logging.info(f"Validation Loss: {val_loss.item()}")
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
                     save_checkpoint(model, opt, step, os.path.join(args.ckpt_dir, 'best_checkpoint.pt'))
@@ -188,7 +189,7 @@ if __name__ == '__main__':
 
     # Test using best checkpoint
     logging.info("Loading best checkpoint for testing")
-    load_checkpoint(model, None, os.path.join(args.ckpt_dir, 'best_checkpoint.pt'))
+    load_checkpoint(model, None, os.path.join(args.ckpt_dir, 'latest_checkpoint.pt'))
     _, index_count = evaluate(model, test_dataloader, "Test", writer)
     save_histogram(args, index_count)
 
