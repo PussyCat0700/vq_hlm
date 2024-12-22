@@ -78,9 +78,10 @@ def get_model(vae_config_path):
         )
     elif vae_config['vq_type'] == 'LearnableRVQ': 
         vqvae = ResidualVQ(
-            dim=vae_config['embedding_dim'],
+            dim = vae_config['embedding_dim'],
             codebook_dim=vae_config['codebook_dim'],
-            codebook_size=vae_config['codebook_size'],
+            num_quantizers = vae_config['num_quantizers'],
+            codebook_size = vae_config['codebook_size'], 
             decay=0.8,
             commitment_weight=1.,
             kmeans_init=True,
