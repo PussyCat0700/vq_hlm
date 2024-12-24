@@ -10,8 +10,6 @@ class TruthXVAE(nn.Module):
     def get_basic_block(self, d1, d2):
         return nn.Sequential(
             nn.Linear(d1, d2),
-            nn.LayerNorm(d2),
-            nn.LeakyReLU(),
         )
 
     def __init__(self, vae_config):
