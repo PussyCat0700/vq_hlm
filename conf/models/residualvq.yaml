@@ -2,4 +2,4 @@ vq_type: "ResidualVQ"
 codebook_dim: 1024
 embedding_dim: 768
 codebook_size: 1024
-num_quantizers: 4
+num_quantizers: 8

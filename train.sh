@@ -2,7 +2,7 @@
 
 set -x
 
-RUN_NAME=1221_rvq_CB4_CBDIM1024_BS256_EPOCH10
+RUN_NAME=1221_rvq_CB8_CBDIM1024
 MODEL_CONFIG_DIR=./conf/models/residualvq.yaml
 DATA_CONFIG_DIR=./conf/data/example.yaml
 OUTPUT_DIR=./exp/$RUN_NAME

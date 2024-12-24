@@ -18,7 +18,7 @@ logging.basicConfig(
 )
 
 lr = 3e-4
-train_epochs = 10
+train_epochs = 1
 num_codes = 1024
 num_quantizers = 1
 is_multi_codebook = False
@@ -87,6 +87,9 @@ def evaluate(model, eval_loader, split: str, writer: SummaryWriter = None, step:
         writer.add_scalar(f'Loss/{split}', eval_rec_loss, step)
         for codebook_idx in range(num_quantizers):
             writer.add_scalar(f'Active_Codebook_{codebook_idx+1}/{split}', individual_utilizations[codebook_idx], step)
+    
+    total_params = sum(p.numel() for p in model.parameters())
+    logging.info(f"Total parameters: {total_params / 1e6:.3f}M")
     return eval_rec_loss, index_counts
 
 def save_histogram(args, index_counts):
@@ -113,6 +116,12 @@ def save_histogram(args, index_counts):
 
 
 def train(model, args, train_loader, val_loader=None, train_epochs=1, alpha=10, validate_every=1000, writer=None, resume_from_step=0):
+    # 统计参数量并转换为M单位
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    logging.info(f"Total parameters: {total_params / 1e6:.3f}M")
+    logging.info(f"Trainable parameters: {trainable_params / 1e6:.3f}M")
+
     model.to(device)
     model.train()
     opt = torch.optim.AdamW(model.parameters(), lr=lr)
