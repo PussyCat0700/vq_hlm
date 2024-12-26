@@ -2,7 +2,7 @@
 
 set -x
 
-RUN_NAME=1226_rvq_CB8_CBDIM768
+RUN_NAME=1226_rvq_CB12_CBDIM768
 MODEL_CONFIG_DIR=./conf/models/learnableRVQ.yaml
 DATA_CONFIG_DIR=./conf/data/example.yaml
 OUTPUT_DIR=./exp/$RUN_NAME
