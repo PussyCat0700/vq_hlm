@@ -3,10 +3,10 @@
 set -x
 
 RUN_NAME=$1
-# RUN_NAME=1226_rvq_CB4_CBDIM128
+OUTPUT_DIR=./exp/$RUN_NAME
+# RUN_NAME=1226_rvq_CB12_CBDIM768_EPOCH10
 # MODEL_CONFIG_DIR=./conf/models/learnableRVQ.yaml
 # DATA_CONFIG_DIR=./conf/data/example.yaml
-OUTPUT_DIR=./exp/$RUN_NAME
 
 # mkdir -p $OUTPUT_DIR
 # cp $MODEL_CONFIG_DIR $OUTPUT_DIR/model_config.yaml
