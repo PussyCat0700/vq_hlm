@@ -10,4 +10,4 @@
 #SBATCH --output=/home/yxwang/slurm/%j.out
 #SBATCH --error=/home/yxwang/slurm/%j.err
 
-bash train.sh
+bash train.sh $1
