@@ -2,4 +2,4 @@ vq_type: "LearnableRVQ"
 codebook_dim: 768
 embedding_dim: 768
 codebook_size: 1024
-num_quantizers: 4
+num_quantizers: 8
