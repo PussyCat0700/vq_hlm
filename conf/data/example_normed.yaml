@@ -1,0 +1,5 @@
+h5_file_path: "/home/yfliu/public/wikitext103_gpt2ln2_stride1024/"
+batch_size: 128
+seq_length: 1024
+hidden_size: 768
+chunk_size: 4
