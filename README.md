@@ -17,6 +17,7 @@
 
 # Change Log
 
+- [24.12.29] Validation interval可以用`valid_every`参数指定了。默认值仍与之前一致。
 
 - [24.12.22]
     - 新增训练自动续点续传功能

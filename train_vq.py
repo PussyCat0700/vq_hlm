@@ -122,7 +122,7 @@ def save_histogram(args, eval_ret):
         plt.savefig(os.path.join(codebooks_info_dir, f'{filename}.png'))
 
 
-def train(model, args, train_loader, val_loader=None, max_train_epochs=1, alpha=10, validate_every=1000, writer=None):
+def train(model, args, train_loader, val_loader=None, max_train_epochs=1, alpha=10, writer=None):
     model.to(device)
     model.train()
     opt = torch.optim.AdamW(model.parameters(), lr=lr)
@@ -162,7 +162,7 @@ def train(model, args, train_loader, val_loader=None, max_train_epochs=1, alpha=
                 writer.add_scalar('Active/Train', active_percent, step)
             step += 1
 
-            if val_loader and step % validate_every == 0:
+            if val_loader and step % args.valid_every == 0:
                 val_loss = evaluate(model, val_loader, "Validation", writer, step)[KEY_EVAL_REC_LOSS]
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
@@ -185,6 +185,7 @@ if __name__ == '__main__':
     parser.add_argument("--data_config", default='conf/data/example.yaml')
     parser.add_argument("--model_config", default='conf/models/vectorquantize.yaml')
     parser.add_argument("--ckpt_dir", default='./checkpoints')
+    parser.add_argument('--valid_every', default=1000, type=int)
     parser.add_argument("--test", action='store_true')
     parser.add_argument("--patience", type=int, default=0,
                         help='setting patience>0 will enable infinite training epochs until early stopping.')
