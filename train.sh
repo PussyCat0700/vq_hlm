@@ -3,8 +3,8 @@
 set -x
 
 # RUN_NAME=$1
-RUN_NAME=1230_rvq_CB12_CBDIM1024_CBSIZE2048
-MODEL_CONFIG_DIR=./conf/models/residualvq.yaml
+RUN_NAME=1230_rvq_CB12_CBDIM768_CBSIZE2048_EPOCH30
+MODEL_CONFIG_DIR=./conf/models/learnableRVQ.yaml
 DATA_CONFIG_DIR=./conf/data/example.yaml
 OUTPUT_DIR=./exp/$RUN_NAME
 
