@@ -1,5 +1,5 @@
 vq_type: "ResidualVQ"
 codebook_dim: 1024
 embedding_dim: 768
-codebook_size: 2048
-num_quantizers: 12
+codebook_size: 8192
+num_quantizers: 3
