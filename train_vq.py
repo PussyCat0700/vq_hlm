@@ -18,7 +18,7 @@ logging.basicConfig(
 )
 
 lr = 3e-4
-train_epochs = 30
+train_epochs = 100
 num_codes = 1024
 num_quantizers = 1
 is_multi_codebook = False
