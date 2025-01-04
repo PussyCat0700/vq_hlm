@@ -2,8 +2,8 @@
 
 set -x
 
-RUN_NAME=0102_vq_CB1_CBDIM1024_CBSIZE24576
-MODEL_CONFIG_DIR=./conf/models/vectorquantize.yaml
+RUN_NAME=0102_rvq_CB192_CBDIM1024_CBSIZE1024
+MODEL_CONFIG_DIR=./conf/models/residualvq.yaml
 DATA_CONFIG_DIR=./conf/data/example.yaml
 OUTPUT_DIR=./exp/$RUN_NAME
 
