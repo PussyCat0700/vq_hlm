@@ -15,7 +15,7 @@ import h5py
 import os
 
 
-SAVE_DIR = "/data1/yfliu/vqhlm/datasets/wikitext103_gpt2finetuned/"  # HARD CODED
+SAVE_DIR = "/home/yfliu/public/wikitext103_gpt2ln2_stride1024"  # HARD CODED
 logger = logging.get_logger(__name__)
 
 
@@ -51,8 +51,7 @@ class ExportTrainer(Trainer):
         self.labels_dataset[index] = labels.cpu().numpy()
 
     def hook_fn(self, module, input, output):
-        hidden_states = output[0]  # (batch_size, seq_length, hidden_size)
-
+        hidden_states = output  # (batch_size, seq_length, hidden_size)
         batch_size = hidden_states.size(0)
         seq_length = hidden_states.size(1)
         hidden_size = hidden_states.size(2)
@@ -396,7 +395,7 @@ class ExportTrainer(Trainer):
         labels = None
         # from transformers.models.gpt2.modeling_gpt2 import GPT2LMHeadModel
         self.inputs = inputs
-        hook = model.transformer.h[5].register_forward_hook(partial(self.hook_fn))
+        hook = model.transformer.h[5].ln_2.register_forward_hook(partial(self.hook_fn))
         outputs = model(**inputs)
         hook.remove()
         if labels is not None:
