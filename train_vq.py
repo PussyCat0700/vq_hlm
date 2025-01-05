@@ -18,7 +18,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 
-lr = 3e-4
 num_codes = 1024
 num_quantizers = 1
 is_multi_codebook = False
@@ -125,7 +124,8 @@ def save_histogram(args, eval_ret):
 def train(model, args, train_loader, val_loader=None, max_train_epochs=1, alpha=10, writer=None):
     model.to(device)
     model.train()
-    opt = torch.optim.AdamW(model.parameters(), lr=lr)
+    opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
+    print(f'{args.lr=}')
     best_val_loss = float('inf')
     best_epoch = 0
     step = 0
@@ -189,6 +189,7 @@ if __name__ == '__main__':
     parser.add_argument("--test", action='store_true')
     parser.add_argument("--patience", type=int, default=0,
                         help='setting patience>0 will enable infinite training epochs until early stopping.')
+    parser.add_argument('--lr', type=float, default=3e-4)
     args = parser.parse_args()
     print(f"checkpoint dir: {args.ckpt_dir}")
     os.makedirs(args.ckpt_dir, exist_ok=True)
