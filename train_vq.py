@@ -27,11 +27,13 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def update_global(args):
-    global num_codes, num_quantizers, is_multi_codebook
-    data_config = load_config(args.model_config)
-    num_codes = data_config.get('codebook_size', 1024)
-    num_quantizers = data_config.get('num_quantizers', 1)
+    global num_codes, num_quantizers, is_multi_codebook, lr, train_epochs
+    model_config = load_config(args.model_config)
+    num_codes = model_config.get('codebook_size', num_codes)
+    num_quantizers = model_config.get('num_quantizers', num_quantizers)
     is_multi_codebook = num_quantizers > 1
+    lr = model_config.get('lr', lr)
+    train_epochs = model_config.get('epoch',train_epochs)
 
 
 def save_checkpoint(model, optimizer, step, ckpt_path):
