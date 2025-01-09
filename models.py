@@ -24,7 +24,7 @@ def get_model(vae_config_path):
             num_quantizers = vae_config['num_quantizers'],      # specify number of quantizers
             codebook_size = vae_config['codebook_size'],    # codebook size
         )
-    elif vae_config['vq_type'] == 'TruthX_ResidualVQ':
+    elif vae_config['vq_type'].startswith('TruthX'):
         vqvae = TruthXVAE(vae_config)
     elif vae_config['vq_type'] == 'GroupedResidualVQ':  
         vqvae = GroupedResidualVQ(
