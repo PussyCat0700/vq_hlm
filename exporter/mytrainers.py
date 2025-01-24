@@ -15,7 +15,7 @@ import h5py
 import os
 
 
-SAVE_DIR = "/data1/yfliu/vqhlm/datasets/wikitext103_gpt2finetuned/"  # HARD CODED
+SAVE_DIR = "/inspire/hdd/ws-f4d69b29-e0a5-44e6-bd92-acf4de9990f0/public-project/liuyuliang-240108350135/datasets/wikitext103_gpt2finetuned/layer10_h5"  # HARD CODED
 logger = logging.get_logger(__name__)
 
 
@@ -58,13 +58,14 @@ class ExportTrainer(Trainer):
         hidden_size = hidden_states.size(2)
         assert seq_length == self.seq_length, f"{seq_length=} which is not {self.seq_length=}"
         assert hidden_size == self.hidden_size, f"{hidden_size=} which is not {self.hidden_size=}"
+        import pdb; pdb.set_trace()
         for batch_idx in range(batch_size):
             # 获取每个 batch 对应的 input_ids 和 labels
             input_ids = self.inputs['input_ids'][batch_idx]
             labels = self.inputs['labels'][batch_idx]
 
             # 保存数据到 HDF5 文件
-            self.save_to_hdf5(batch_idx, hidden_states[batch_idx], input_ids, labels)
+            # self.save_to_hdf5(batch_idx, hidden_states[batch_idx], input_ids, labels)
 
         return output
     
@@ -396,7 +397,7 @@ class ExportTrainer(Trainer):
         labels = None
         # from transformers.models.gpt2.modeling_gpt2 import GPT2LMHeadModel
         self.inputs = inputs
-        hook = model.transformer.h[5].register_forward_hook(partial(self.hook_fn))
+        hook = model.transformer.h[9].register_forward_hook(partial(self.hook_fn))
         outputs = model(**inputs)
         hook.remove()
         if labels is not None:

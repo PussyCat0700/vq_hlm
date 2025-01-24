@@ -1,0 +1,7 @@
+torch==2.4.0
+transformers==4.45
+yaml
+h5py
+tqdm
+tensorboard
+matplotlib

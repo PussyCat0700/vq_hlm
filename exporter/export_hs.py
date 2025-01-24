@@ -184,7 +184,7 @@ class DataTrainingArguments:
         default=True, metadata={"help": "Whether to keep line breaks when using TXT files or not."}
     )
 
-    eval_subset: str = field(default='validation')
+    eval_subset: str = field(default='train')
     stride: int = field(default=512)
     patience: int = field(default=None)
     prompt: str = field(default=None)

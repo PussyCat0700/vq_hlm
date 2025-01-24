@@ -3,4 +3,4 @@ transformers
 datasets
 tqdm
 scipy
-faiss-gpu==1.7.2
+# faiss-gpu==1.7.2

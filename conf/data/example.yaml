@@ -1,5 +1,0 @@
-h5_file_path: "/home/yxwang/Dataset/vqhlm/wikitext103_gpt2finetuned/"
-batch_size: 128
-seq_length: 1024
-hidden_size: 768
-chunk_size: 4
