@@ -153,3 +153,4 @@ cython_debug/
 *.pt
 *.csv
 *.png
+*.sh

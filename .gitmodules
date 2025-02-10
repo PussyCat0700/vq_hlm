@@ -1,3 +1,6 @@
 [submodule "vector-quantize-pytorch"]
 	path = vector-quantize-pytorch
 	url = https://github.com/lucidrains/vector-quantize-pytorch
+[submodule "ContextLM"]
+	path = ContextLM
+	url = https://github.com/dbylynn/ContextLM
