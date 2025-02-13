@@ -73,16 +73,21 @@ class train_hlm(Trainer):
 
 def configure_training(model, train_dataset, val_dataset):
     training_args = TrainingArguments(
-        output_dir="./exp/0211testhlm",          # 保存结果
+        output_dir="./exp/0214testhlm",          # 保存结果
         do_train=True,
         do_eval=True,
-        num_train_epochs=3,              # 训练轮数
+        num_train_epochs=10,              # 训练轮数
         per_device_train_batch_size=4,   # 每个设备的训练批次大小
         gradient_accumulation_steps=8,   # 梯度累积步数
         per_device_eval_batch_size=4,    # 每个设备的评估批次大小
-        logging_dir="./logs",            # 日志目录
+        logging_dir="./exp/0214testhlm",            # 日志目录
         logging_steps=10,               # 每500步记录日志
         save_steps=100,                  # 每500步保存模型
+        learning_rate=1e-4,               # 学习率
+        warmup_steps=100,               # 预热步数
+        weight_decay=0.01,              # 权重衰减
+        adam_beta1=0.9,                      # Adam优化器的beta1参数
+        adam_beta2=0.95,                 # Adam优化器的beta2参数
     )
     
     trainer = train_hlm(
@@ -98,9 +103,8 @@ def train_model(trainer):
     trainer.train()
 
 # 6. 保存模型
-def save_model_and_tokenizer(model, tokenizer):
+def save_model(model):
     model.save_pretrained("./gpt2_finetuned")
-    tokenizer.save_pretrained("./gpt2_finetuned")
 
 # 7. 生成文本
 def generate_text(tokenizer):
@@ -136,7 +140,7 @@ def main():
     
     # 6. 保存模型
     logging.info('Saving model and tokenizer')
-    save_model_and_tokenizer(model)
+    save_model(model)
     
     # 7. 生成文本
     logging.info('Generating text')
