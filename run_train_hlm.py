@@ -29,7 +29,6 @@ import warnings
 from dataclasses import dataclass, field
 from itertools import chain
 from typing import Optional
-from models import get_model
 
 import datasets
 import torch
@@ -40,15 +39,15 @@ from transformers import (
     CONFIG_MAPPING,
     MODEL_FOR_CAUSAL_LM_MAPPING,
     AutoConfig,
-    AutoModelForCausalLM,
     AutoTokenizer,
     HfArgumentParser,
     Trainer,
-    TrainingArguments,
     default_data_collator,
     is_torch_tpu_available,
     set_seed,
 )
+from hlm.hlm_training_args import HLMTrainingArguments
+from hlm.modeling_gpt2 import HLMGPT2LMHeadModel
 from transformers.testing_utils import CaptureLogger
 from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version, send_example_telemetry
@@ -268,7 +267,7 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
-    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
+    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, HLMTrainingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
         # let's parse it to get our arguments.
@@ -460,10 +459,9 @@ def main():
         )
 
         
-        vae_model = {'vae_config_path': model_args.vae_config_path, 'vae_pretrained_model_path': model_args.vae_pretrained_model_path, 'chunk_size': data_args.chunk_size} if model_args.vae_config_path != None else None
+        vae_model_config = {'vae_config_path': model_args.vae_config_path, 'vae_pretrained_model_path': model_args.vae_pretrained_model_path, 'chunk_size': data_args.chunk_size} if model_args.vae_config_path != None else None
 
-        # import pdb; pdb.set_trace()
-        model = AutoModelForCausalLM.from_pretrained(
+        model = HLMGPT2LMHeadModel.from_pretrained(
             model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=config,
@@ -475,12 +473,12 @@ def main():
             low_cpu_mem_usage=model_args.low_cpu_mem_usage,
             input_layers = training_args.input_layers, 
             ctx_layers = training_args.ctx_layers, 
-            vae_model = vae_model, 
+            vae_model_config = vae_model_config, 
             training_type = training_args.training_type
         )
 
     else:
-        model = AutoModelForCausalLM.from_config(config, trust_remote_code=model_args.trust_remote_code)
+        model = HLMGPT2LMHeadModel.from_config(config, trust_remote_code=model_args.trust_remote_code)
         n_params = sum({p.data_ptr(): p.numel() for p in model.parameters()}.values())
         logger.info(f"Training new model from scratch - Total size={n_params/2**20:.2f}M params")
 

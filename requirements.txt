@@ -1,3 +1,4 @@
+transformers==4.46.2
 torch
 yaml
 h5py
