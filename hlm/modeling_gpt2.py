@@ -15,6 +15,7 @@
 # limitations under the License.
 """PyTorch OpenAI GPT-2 model."""
 
+from contextlib import nullcontext
 import logging
 from typing import Optional, Tuple, Union
 
@@ -31,7 +32,7 @@ from transformers.modeling_attn_mask_utils import _prepare_4d_attention_mask_for
 from transformers.modeling_outputs import BaseModelOutputWithPastAndCrossAttentions, CausalLMOutputWithCrossAttentions
 from transformers.modeling_utils import PreTrainedModel
 from transformers.models.gpt2.modeling_gpt2 import GPT2MLP, GPT2Attention, GPT2FlashAttention2, GPT2LMHeadModel, GPT2Model, GPT2SdpaAttention
-from vector_quantize_pytorch import ResidualVQ, SimVQ, VectorQuantize, LFQ
+from vector_quantize_pytorch import SimVQ, LFQ
 
 from models import get_model
 from utils import load_checkpoint
@@ -248,13 +249,17 @@ class HLMGPT2Model(GPT2Model):
         self.input_layers = input_layers
         self.embed_dim = config.hidden_size
         self.ctx_layers = ctx_layers
+        self.vae_no_grad = True
 
         self.vqvae = None
         if vae_model_config is not None:
             self.vqvae = get_model(vae_model_config['vae_config_path'])
+            self.vae_no_grad = vae_model_config['no_grad']
             if vae_model_config['vae_pretrained_model_path'] is not None:
                 load_checkpoint(self.vqvae, None, vae_model_config['vae_pretrained_model_path'])
                 logger.info(f"vae model loaded with config {vae_model_config}")
+            if self.vae_no_grad:
+                self.vqvae.eval()
         # self.vae_model = vae_model if vae_model != None else None
         self.chunk_size = chunk_size
 
@@ -263,6 +268,9 @@ class HLMGPT2Model(GPT2Model):
 
         self.drop = nn.Dropout(config.embd_pdrop)
         self.h = nn.ModuleList([HLMGPT2Block(config, layer_idx=i, chunk_size=self.chunk_size) for i in range(config.num_hidden_layers)])
+        if self.vae_no_grad:
+            for _ in range(self.input_layers):
+                self.h.eval()
         self.ln_f = nn.LayerNorm(self.embed_dim, eps=config.layer_norm_epsilon)
 
         # Model parallel
@@ -509,15 +517,20 @@ class HLMGPT2Model(GPT2Model):
                     hidden_states_reshaped = hidden_states.view(batch_size, num_ctx_tokens, self.chunk_size, hidden_size)
                     ctx_hidden_states = hidden_states_reshaped.mean(dim=2)
 
-                    if isinstance(self.vqvae, VectorQuantize) or isinstance(self.vqvae, SimVQ) or isinstance(self.vqvae, ResidualVQ):
-                        ctx_tokens, ctx_token_ids, cmt_loss = self.vqvae(ctx_hidden_states)
-                        qualitized_loss = (ctx_tokens - ctx_hidden_states).abs().mean()
-                        qualitized_loss += cmt_loss.mean()
-
-                    if isinstance(self.vqvae, LFQ): 
-                        ctx_tokens, ctx_token_ids, entropy_aux_loss = self.vqvae(ctx_hidden_states)
-                        qualitized_loss = F.l1_loss(ctx_tokens, ctx_hidden_states)
-                        qualitized_loss += entropy_aux_loss
+                    ctx_manager = torch.inference_mode if self.vae_no_grad else nullcontext
+                    with ctx_manager():
+                        if isinstance(self.vqvae, LFQ): 
+                            ctx_tokens, ctx_token_ids, entropy_aux_loss = self.vqvae(ctx_hidden_states)
+                            qualitized_loss = F.l1_loss(ctx_tokens, ctx_hidden_states)
+                            qualitized_loss += entropy_aux_loss
+                        else:
+                            # This is ususally the default branch
+                            ctx_tokens, ctx_token_ids, cmt_loss = self.vqvae(ctx_hidden_states)
+                            qualitized_loss = (ctx_tokens - ctx_hidden_states).abs().mean()
+                            qualitized_loss += cmt_loss.mean()
+                    if self.vae_no_grad:
+                        # Workaround for: RuntimeError: Inference tensors cannot be saved for backward.
+                        ctx_tokens = ctx_tokens.clone()
                         
                     
                 else: ctx_tokens=None
@@ -584,11 +597,14 @@ class HLMGPT2Model(GPT2Model):
                             max_indices = torch.argmax(ctx_pred, dim=-1)
                             # max_indices = ctx_token_ids
                             
-                            if isinstance(self.vqvae, VectorQuantize) or isinstance(self.vqvae, ResidualVQ):
-                                qualitized_states = self.vqvae.get_output_from_indices(max_indices)
-                            
-                            elif isinstance(self.vqvae, SimVQ) or isinstance(self.vqvae, LFQ):
-                                qualitized_states = self.vqvae.indices_to_codes(max_indices)
+                            ctx_manager = torch.inference_mode if self.vae_no_grad else nullcontext
+                            with ctx_manager():
+                                # We get quantized embedding from codes
+                                if isinstance(self.vqvae, SimVQ) or isinstance(self.vqvae, LFQ):
+                                    qualitized_states = self.vqvae.indices_to_codes(max_indices)
+                                else:
+                                    # This is ususally the default branch
+                                    qualitized_states = self.vqvae.get_output_from_indices(max_indices)
 
 
                             qualitized_states = qualitized_states[:, :-1, :]
@@ -738,8 +754,8 @@ class HLMGPT2LMHeadModel(GPT2LMHeadModel, PreTrainedModel):
             # move labels to correct device to enable model parallelism
             labels = labels.to(lm_logits.device)
             # Shift so that tokens < n predict n
-            shift_logits = lm_logits[..., :-1, :].contiguous()
-            shift_labels = labels[..., 1:].contiguous()
+            shift_logits = lm_logits[..., :-1, :].contiguous()  # [16, 203, 50257]
+            shift_labels = labels[..., 1:].contiguous()  # [16, 1024]
             # Flatten the tokens
             loss_fct = CrossEntropyLoss()           
 

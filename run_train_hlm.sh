@@ -24,7 +24,7 @@ python run_train_hlm.py \
     --vae_config_path $vae_config_path \
     --vae_pretrained_model_path $vae_model_path \
     --input_layers 6 \
-    --ctx_layers 7 \
+    --ctx_layers 12 \
     --do_train \
     --weight_decay=0.1 \
     --save_strategy "epoch" \
@@ -36,4 +36,4 @@ python run_train_hlm.py \
     --output_dir $out_path \
     --overwrite_output_dir \
     --chunk_size 4 \
-    --training_type after_input_layer
+    --training_type after_input_layer_exclude_cb

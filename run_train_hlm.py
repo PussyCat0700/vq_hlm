@@ -458,8 +458,14 @@ def main():
             else getattr(torch, model_args.torch_dtype)
         )
 
-        
-        vae_model_config = {'vae_config_path': model_args.vae_config_path, 'vae_pretrained_model_path': model_args.vae_pretrained_model_path, 'chunk_size': data_args.chunk_size} if model_args.vae_config_path != None else None
+        vae_model_config = None
+        if model_args.vae_config_path is not None:
+            vae_model_config = {
+                'vae_config_path': model_args.vae_config_path,
+                'vae_pretrained_model_path': model_args.vae_pretrained_model_path,
+                'chunk_size': data_args.chunk_size,
+                'no_grad': True,
+                }
 
         model = HLMGPT2LMHeadModel.from_pretrained(
             model_args.model_name_or_path,
