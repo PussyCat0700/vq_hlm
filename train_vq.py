@@ -24,6 +24,7 @@ num_quantizers = 1
 is_multi_codebook = False
 seed = 1234
 device = "cuda" if torch.cuda.is_available() else "cpu"
+criterion = torch.nn.MSELoss()
 
 
 def update_global(args):
@@ -50,7 +51,7 @@ def load_checkpoint(model, optimizer, ckpt_path):
 
 def compute_loss(model, x, alpha=10):
     out, indices, cmt_loss = model(x)
-    rec_loss = (out - x).abs().mean()
+    rec_loss = criterion(out, x)
     cmt_loss = cmt_loss.mean()
     total_loss = rec_loss + alpha * cmt_loss
     return rec_loss, cmt_loss, total_loss, indices
