@@ -14,7 +14,7 @@ logging.basicConfig(
 CODEBOOK_DIM=1024
 EMBEDDING_DIM=768
 CODEBOOK_SIZE=8192
-NUM_QUANTIZER=24
+NUM_QUANTIZER=64
 
 # 1. 加载数据集
 def load_data(prefix):
@@ -47,7 +47,7 @@ def tokenize_data(dataset, tokenizer):
 
 # 4. 配置训练参数
 class train_hlm(Trainer):
-    def compute_loss(self, model, inputs, num_items_in_batch):
+    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
         for i in range(NUM_QUANTIZER):
             model.wte[i].to(model.device)
             model.vqhead[i].to(model.device)
@@ -71,20 +71,30 @@ class train_hlm(Trainer):
         loss = F.cross_entropy(lm_logits.view(-1, lm_logits.size(-1)), label.view(-1).long(), ignore_index=-100)
         return loss
 
+    # def prediction_loop(self,
+    #     dataloader: DataLoader,
+    #     description: str,
+    #     prediction_loss_only: Optional[bool] = None,
+    #     ignore_keys: Optional[List[str]] = None,
+    #     metric_key_prefix: str = "eval"
+    # ):
+
+
 def configure_training(model, train_dataset, val_dataset):
     training_args = TrainingArguments(
-        output_dir="./exp/0214testhlm",          # 保存结果
+        output_dir="./exp/0217bigbs_fix",          # 保存结果
         do_train=True,
-        do_eval=True,
+        do_eval=False,
         num_train_epochs=10,              # 训练轮数
         per_device_train_batch_size=4,   # 每个设备的训练批次大小
-        gradient_accumulation_steps=8,   # 梯度累积步数
+        gradient_accumulation_steps=64,   # 梯度累积步数
         per_device_eval_batch_size=4,    # 每个设备的评估批次大小
-        logging_dir="./exp/0214testhlm",            # 日志目录
+        logging_dir="./exp/0217bigbs_fix",            # 日志目录
         logging_steps=10,               # 每500步记录日志
-        save_steps=100,                  # 每500步保存模型
-        learning_rate=1e-4,               # 学习率
-        warmup_steps=100,               # 预热步数
+        save_steps=500,                  # 每500步保存模型
+        learning_rate=1e-3,               # 学习率
+        max_grad_norm=10,
+        warmup_steps=1000,               # 预热步数
         weight_decay=0.01,              # 权重衰减
         adam_beta1=0.9,                      # Adam优化器的beta1参数
         adam_beta2=0.95,                 # Adam优化器的beta2参数
@@ -115,7 +125,7 @@ def generate_text(tokenizer):
 def main():
     # 1. 加载数据
     logging.info('Loading data')
-    data_path = '/home/yxwang/Dataset/vqhlm/wikitext103_gpt2ln2_stride1024/'# 替换为你的数据文件路径
+    data_path = '/home/yxwang/Dataset/vqhlm/ResidualSimVQ/'# 替换为你的数据文件路径
     dataset = load_data(data_path)
     train_dataset = dataset['train']
     val_dataset = dataset['validation']
