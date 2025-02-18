@@ -1,6 +1,7 @@
 import os
-from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments, pipeline
+from transformers import AutoConfig, Trainer, TrainingArguments, pipeline
 from datasets import Dataset, load_dataset
+from models.gpt2 import HLMGPT2
 import torch
 import torch.nn.functional as F
 import logging
@@ -10,12 +11,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 
-# 0108_rvq_CN24_CD1k_CS8k_LR1E-3_EPOCH100_BS256
-CODEBOOK_DIM=1024
-EMBEDDING_DIM=768
-CODEBOOK_SIZE=8192
-NUM_QUANTIZER=64
-
 # 1. 加载数据集
 def load_data(prefix):
     dataset = load_dataset(os.path.join(prefix, 'htoken.py'),trust_remote_code=True)
@@ -23,73 +18,26 @@ def load_data(prefix):
 
 # 2. 配置GPT-2模型和Tokenizer
 def load_model_and_tokenizer(model_name="gpt2"):
-    # tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name)
-    model.wte = [torch.nn.Embedding(CODEBOOK_SIZE, EMBEDDING_DIM) for _ in range(NUM_QUANTIZER)]
-    # model.wte_proj = torch.nn.Linear(CODEBOOK_DIM, EMBEDDING_DIM)
-    model.vqhead = [torch.nn.Linear(EMBEDDING_DIM, CODEBOOK_SIZE) for _ in range(NUM_QUANTIZER)]
-
-    # TODO, use vqvae as lm_head
-    # model.vqvae = 
-
-    model.transformer.wte = torch.nn.Identity()
-    model.lm_head = torch.nn.Identity()
+    gpt2_config = AutoConfig.from_pretrained(model_name)
+    model = HLMGPT2(gpt2_config, model_name)
     return model
 
 # 3. 数据预处理：tokenize数据集
 def tokenize_data(dataset, tokenizer):
-    # def tokenize_function(examples):
-    #     return tokenizer(examples['text'], return_tensors='pt', padding=True, truncation=True)
-    
-    # tokenized_datasets = dataset.map(tokenize_function, batched=True)
-    # return tokenized_datasets
+    # we dont need tokenization
     return dataset
 
 # 4. 配置训练参数
-class train_hlm(Trainer):
-    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
-        for i in range(NUM_QUANTIZER):
-            model.wte[i].to(model.device)
-            model.vqhead[i].to(model.device)
-        # inputs: input_ids: Bx1024x24, label: Bx1024x24
-        input_ids, label = inputs['input_ids'], inputs['labels']
-        input_embeds = None
-        for i in range(NUM_QUANTIZER):
-            if input_embeds is None:
-                input_embeds = model.wte[i](input_ids[:, :, i])
-            else:
-                input_embeds += model.wte[i](input_ids[:, :, i])
-        # input_embeds = model.wte_proj(input_embeds)
-        outputs = model.transformer(
-            inputs_embeds=input_embeds,
-        )
-        hidden_states = outputs[0]
-        lm_logits = []
-        for i in range(NUM_QUANTIZER):
-            lm_logits.append(model.vqhead[i](hidden_states)) # Bx1024x8192
-        lm_logits = torch.stack(lm_logits, dim=2)
-        loss = F.cross_entropy(lm_logits.view(-1, lm_logits.size(-1)), label.view(-1).long(), ignore_index=-100)
-        return loss
-
-    # def prediction_loop(self,
-    #     dataloader: DataLoader,
-    #     description: str,
-    #     prediction_loss_only: Optional[bool] = None,
-    #     ignore_keys: Optional[List[str]] = None,
-    #     metric_key_prefix: str = "eval"
-    # ):
-
-
 def configure_training(model, train_dataset, val_dataset):
     training_args = TrainingArguments(
-        output_dir="./exp/0217bigbs_fix",          # 保存结果
+        output_dir="./exp/0218paralleltest",          # 保存结果
         do_train=True,
         do_eval=False,
         num_train_epochs=10,              # 训练轮数
-        per_device_train_batch_size=4,   # 每个设备的训练批次大小
-        gradient_accumulation_steps=64,   # 梯度累积步数
-        per_device_eval_batch_size=4,    # 每个设备的评估批次大小
-        logging_dir="./exp/0217bigbs_fix",            # 日志目录
+        per_device_train_batch_size=2,   # 每个设备的训练批次大小
+        gradient_accumulation_steps=8,   # 梯度累积步数
+        per_device_eval_batch_size=2,    # 每个设备的评估批次大小
+        logging_dir="./exp/0218paralleltest",            # 日志目录
         logging_steps=10,               # 每500步记录日志
         save_steps=500,                  # 每500步保存模型
         learning_rate=1e-3,               # 学习率
@@ -98,9 +46,10 @@ def configure_training(model, train_dataset, val_dataset):
         weight_decay=0.01,              # 权重衰减
         adam_beta1=0.9,                      # Adam优化器的beta1参数
         adam_beta2=0.95,                 # Adam优化器的beta2参数
+        ddp_find_unused_parameters=False,
     )
     
-    trainer = train_hlm(
+    trainer = Trainer(
         model=model,                        # 要训练的模型
         args=training_args,                 # 训练参数
         train_dataset=train_dataset,   # 训练数据集
@@ -154,6 +103,7 @@ def main():
     
     # 7. 生成文本
     logging.info('Generating text')
+    # TODO
     # generate_text(tokenizer)
 
 if __name__ == "__main__":

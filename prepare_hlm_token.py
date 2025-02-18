@@ -6,7 +6,7 @@ from constants import KEY_LM_HIDDEN_STATES
 from dataloading import get_chunked_h5dataloader
 import logging
 import os
-from models import get_model
+from vq_models import get_model
 from utils import load_config
 import random
 import numpy as np

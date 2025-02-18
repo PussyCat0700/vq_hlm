@@ -12,5 +12,7 @@ OUTPUT_DIR=./exp/$RUN_NAME
 # cp $MODEL_CONFIG_DIR $OUTPUT_DIR/model_config.yaml
 # cp $DATA_CONFIG_DIR $OUTPUT_DIR/data_config.yaml
 
-python train_hlm_gpt2.py \
+# python train_hlm_gpt2.py \
+# | tee $OUTPUT_DIR/train.log
+torchrun --nproc_per_node=4 train_hlm_gpt2.py \
 | tee $OUTPUT_DIR/train.log
