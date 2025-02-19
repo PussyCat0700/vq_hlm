@@ -1,6 +1,7 @@
 import argparse
 from tqdm import tqdm
 import torch
+import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 from constants import KEY_LM_HIDDEN_STATES
 from dataloading import get_chunked_h5dataloader
@@ -52,7 +53,8 @@ def load_checkpoint(model, optimizer, ckpt_path):
 
 def compute_loss(model, x, alpha=10):
     out, indices, cmt_loss = model(x)
-    rec_loss = (out - x).abs().mean()
+    # rec_loss = (out - x).abs().mean()
+    rec_loss = F.mse_loss(out, x)
     cmt_loss = cmt_loss.mean()
     total_loss = rec_loss + alpha * cmt_loss
     return rec_loss, cmt_loss, total_loss, indices
