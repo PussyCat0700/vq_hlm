@@ -30,17 +30,18 @@ def tokenize_data(dataset, tokenizer):
 # 4. 配置训练参数
 def configure_training(model, train_dataset, val_dataset):
     training_args = TrainingArguments(
-        output_dir="./exp/0218paralleltest",          # 保存结果
+        output_dir="./exp/0220constantlr",          # 保存结果
         do_train=True,
         do_eval=False,
-        num_train_epochs=10,              # 训练轮数
+        num_train_epochs=20,              # 训练轮数
         per_device_train_batch_size=2,   # 每个设备的训练批次大小
-        gradient_accumulation_steps=8,   # 梯度累积步数
+        gradient_accumulation_steps=16,   # 梯度累积步数
         per_device_eval_batch_size=2,    # 每个设备的评估批次大小
-        logging_dir="./exp/0218paralleltest",            # 日志目录
+        logging_dir="./exp/0220constantlr",            # 日志目录
         logging_steps=10,               # 每500步记录日志
         save_steps=500,                  # 每500步保存模型
         learning_rate=1e-3,               # 学习率
+        lr_scheduler_type='constant',        # 学习率调度器类型
         max_grad_norm=10,
         warmup_steps=1000,               # 预热步数
         weight_decay=0.01,              # 权重衰减
@@ -60,6 +61,7 @@ def configure_training(model, train_dataset, val_dataset):
 # 5. 训练模型
 def train_model(trainer):
     trainer.train()
+    trainer.eval()
 
 # 6. 保存模型
 def save_model(model):
