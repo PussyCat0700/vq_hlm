@@ -2,7 +2,7 @@
 
 set -x
 
-RUN_NAME=0221reduceonplateau
+RUN_NAME=0222longepoch
 # RUN_NAME=0102_rvq_CB12_CBDIM1024_CBSIZE2048_EPOCH100
 # MODEL_CONFIG_DIR=./conf/models/residualvq.yaml
 # DATA_CONFIG_DIR=./conf/data/example.yaml
