@@ -133,6 +133,9 @@ def train(model, args, train_loader, val_loader=None, max_train_epochs=1, alpha=
     potential_resume_path = os.path.join(args.ckpt_dir, 'latest_checkpoint.pt')
     no_improvement_counter = 0
     should_halt = False
+    if args.scheduler:
+        from torch.optim.lr_scheduler import ReduceLROnPlateau
+        scheduler = ReduceLROnPlateau(opt, 'min', patience=0)
 
     # Load checkpoint if resuming
     if os.path.isfile(potential_resume_path):
@@ -174,6 +177,10 @@ def train(model, args, train_loader, val_loader=None, max_train_epochs=1, alpha=
                     if no_improvement_counter >= args.patience:
                         should_halt = True
                         break
+                if args.scheduler:
+                    scheduler.step(val_loss)
+                    curr_lr_groups = scheduler.get_last_lr()
+                    writer.add_scalar('LR/Train', curr_lr_groups[0], step)
         save_checkpoint(model, opt, step, os.path.join(args.ckpt_dir, 'latest_checkpoint.pt'))
         if should_halt:
             break
@@ -189,6 +196,8 @@ if __name__ == '__main__':
     parser.add_argument("--patience", type=int, default=0,
                         help='setting patience>0 will enable infinite training epochs until early stopping.')
     parser.add_argument("--lr", type=float, default=3e-4)
+    parser.add_argument("--scheduler", action='store_true', 
+                        help='ReduceLRonPlateau')
     args = parser.parse_args()
     print(f"checkpoint dir: {args.ckpt_dir}")
     os.makedirs(args.ckpt_dir, exist_ok=True)
