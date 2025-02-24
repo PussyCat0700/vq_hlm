@@ -15,6 +15,20 @@
 `python train_vq.py --ckpt_dir ./runs/residualvq --model_config conf/models/residualvq.yaml --test`
 - 此外，`example_usage.ipynb`中有数据相关的可视化供大家参考
 
+# Train a hlm model (on gpt2)
+### Prepare token for training
+1. You'd better have a folder `exp/$RUNNAME` with all model_config.yaml, data_config.yaml, best_checkpoint.pt in it.
+2. Run `bash prepare_data.sh $RUNNAME` to prepare token for training.
+3. Copy `datasets/htokens.py` to `path/to/your dataset`. Now you should have `htoken.py` with `{train, val, test}_tokens.pt` in it.
+4. If you have a `htoken` folder in your dataset path before training, please remove it to avoid huggingface using cached data.
+
+### Train a hlm model
+1. Copy training config into `exp/$RUNNAME`. We recommend to customize it in `exp/$RUNNAME`, not in `conf/hlm_train`
+2. Adjust number of gpu in `train_hlm_gpt2.sh`
+3. Run `bash train_hlm_gpt2.sh $RUNNAME` to train a hlm model.
+4. Recommended: use `sbatch runner_hlm_gpt2.slurm $RUNNAME` to submit a slurm job. **Remember to change your slurm config!**
+
+
 # Change Log
 
 - [24.12.02] 导出脚本汇总于`exporter`

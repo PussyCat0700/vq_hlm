@@ -90,5 +90,7 @@ def get_model(vae_config_path):
             learnable_codebook=True,
             ema_update=False,
         )
+    else:
+        raise NotImplementedError('VQ type not implemented')
 
     return vqvae

@@ -14,4 +14,4 @@
 #SBATCH --mail-user=luckywang@sjtu.edu.cn
 
 export NCCL_P2P_DISABLE=1
-bash train_hlm_gpt2.sh
+bash train_hlm_gpt2.sh $1
