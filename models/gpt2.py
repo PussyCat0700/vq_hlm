@@ -23,22 +23,19 @@ import torch.nn.functional as F
 from typing import Callable, Optional, Tuple, Union
 
 
-# 0108_rvq_CN24_CD1k_CS8k_LR1E-3_EPOCH100_BS256
-CODEBOOK_DIM=1024
-EMBEDDING_DIM=768
-CODEBOOK_SIZE=8192
-NUM_QUANTIZER=64
-
-
 class HLMGPT2(GPT2PreTrainedModel, GenerationMixin):
     _tied_weights_keys = ["lm_head.weight"]
 
-    def __init__(self, config, model_name_or_path):
-        super().__init__(config)
-        self.transformer = GPT2Model(config).from_pretrained(model_name_or_path)
-        self.wte = torch.nn.Sequential(*[torch.nn.Embedding(CODEBOOK_SIZE, EMBEDDING_DIM) for _ in range(NUM_QUANTIZER)])
-        # model.wte_proj = torch.nn.Linear(CODEBOOK_DIM, EMBEDDING_DIM)
-        self.vqhead = torch.nn.Sequential(*[torch.nn.Linear(EMBEDDING_DIM, CODEBOOK_SIZE) for _ in range(NUM_QUANTIZER)])
+    def __init__(self, gpt2_config, model_name_or_path, vq_config):
+        super().__init__(gpt2_config)
+        self.transformer = GPT2Model(gpt2_config).from_pretrained(model_name_or_path)
+        self.codebook_dim = vq_config['codebook_dim']
+        self.embedding_dim = vq_config['embedding_dim']
+        self.codebook_size = vq_config['codebook_size']
+        self.num_quantizer = vq_config['num_quantizers']
+        self.wte = torch.nn.Sequential(*[torch.nn.Embedding(self.codebook_size, self.embedding_dim) for _ in range(self.num_quantizer)])
+        # model.wte_proj = torch.nn.Linear(self.codebook_dim, self.embedding_dim)
+        self.vqhead = torch.nn.Sequential(*[torch.nn.Linear(self.embedding_dim, self.codebook_size) for _ in range(self.num_quantizer)])
 
         self.transformer.wte = nn.Identity()
         self.lm_head = nn.Identity()
@@ -120,7 +117,7 @@ class HLMGPT2(GPT2PreTrainedModel, GenerationMixin):
 
         assert input_ids is not None
         inputs_embeds = None
-        for i in range(NUM_QUANTIZER):
+        for i in range(self.num_quantizer):
             if inputs_embeds is None:
                 inputs_embeds = self.wte[i](input_ids[:, :, i])
             else:
@@ -152,20 +149,21 @@ class HLMGPT2(GPT2PreTrainedModel, GenerationMixin):
         lm_logits = []
         loss = None
         labels = labels.to(self.vqhead[0].weight.device)
-        for i in range(NUM_QUANTIZER):
+        for i in range(self.num_quantizer):
             lm_logits.append(self.vqhead[i](hidden_states)) # Bx1024x8192
             if loss is None:
                 loss = F.cross_entropy(lm_logits[-1].view(-1, lm_logits[-1].shape[-1]), labels[:,:,i].view(-1).long(), ignore_index=-100)
             else:
                 loss += F.cross_entropy(lm_logits[-1].view(-1, lm_logits[-1].shape[-1]), labels[:,:,i].view(-1).long(), ignore_index=-100)
-        loss = loss / NUM_QUANTIZER
+        loss = loss / self.num_quantizer
+        lm_logits = lm_logits[-1] # avoid too much memory usage
         if not return_dict:
             output = (lm_logits,) + transformer_outputs[1:]
             return ((loss,) + output) if loss is not None else output
 
         return CausalLMOutputWithCrossAttentions(
             loss=loss,
-            logits=torch.stack(lm_logits, dim=2),
+            logits=lm_logits,
             past_key_values=transformer_outputs.past_key_values,
             hidden_states=transformer_outputs.hidden_states,
             attentions=transformer_outputs.attentions,
