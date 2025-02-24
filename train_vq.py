@@ -18,12 +18,12 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 
-lr = 3e-4
 num_codes = 1024
 num_quantizers = 1
 is_multi_codebook = False
 seed = 1234
 device = "cuda" if torch.cuda.is_available() else "cpu"
+criterion = torch.nn.MSELoss()
 
 
 def update_global(args):
@@ -50,7 +50,7 @@ def load_checkpoint(model, optimizer, ckpt_path):
 
 def compute_loss(model, x, alpha=10):
     out, indices, cmt_loss = model(x)
-    rec_loss = (out - x).abs().mean()
+    rec_loss = criterion(out, x)
     cmt_loss = cmt_loss.mean()
     total_loss = rec_loss + alpha * cmt_loss
     return rec_loss, cmt_loss, total_loss, indices
@@ -125,7 +125,7 @@ def save_histogram(args, eval_ret):
 def train(model, args, train_loader, val_loader=None, max_train_epochs=1, alpha=10, validate_every=1000, writer=None):
     model.to(device)
     model.train()
-    opt = torch.optim.AdamW(model.parameters(), lr=lr)
+    opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
     best_val_loss = float('inf')
     best_epoch = 0
     step = 0
@@ -133,6 +133,9 @@ def train(model, args, train_loader, val_loader=None, max_train_epochs=1, alpha=
     potential_resume_path = os.path.join(args.ckpt_dir, 'latest_checkpoint.pt')
     no_improvement_counter = 0
     should_halt = False
+    if args.scheduler:
+        from torch.optim.lr_scheduler import ReduceLROnPlateau
+        scheduler = ReduceLROnPlateau(opt, 'min', patience=0)
 
     # Load checkpoint if resuming
     if os.path.isfile(potential_resume_path):
@@ -174,6 +177,10 @@ def train(model, args, train_loader, val_loader=None, max_train_epochs=1, alpha=
                     if no_improvement_counter >= args.patience:
                         should_halt = True
                         break
+                if args.scheduler:
+                    scheduler.step(val_loss)
+                    curr_lr_groups = scheduler.get_last_lr()
+                    writer.add_scalar('LR/Train', curr_lr_groups[0], step)
         save_checkpoint(model, opt, step, os.path.join(args.ckpt_dir, 'latest_checkpoint.pt'))
         if should_halt:
             break
@@ -188,6 +195,9 @@ if __name__ == '__main__':
     parser.add_argument("--test", action='store_true')
     parser.add_argument("--patience", type=int, default=0,
                         help='setting patience>0 will enable infinite training epochs until early stopping.')
+    parser.add_argument("--lr", type=float, default=3e-4)
+    parser.add_argument("--scheduler", action='store_true', 
+                        help='ReduceLRonPlateau')
     args = parser.parse_args()
     print(f"checkpoint dir: {args.ckpt_dir}")
     os.makedirs(args.ckpt_dir, exist_ok=True)
