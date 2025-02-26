@@ -1,0 +1,4 @@
+vq_type: "LearnableVQ"
+codebook_dim: 768
+embedding_dim: 768
+codebook_size: 1024

@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 from dataloading import get_chunked_h5dataloader
 import logging
 import os
-from models import get_model
-from utils import load_config
+from vq_models import get_model
+from utils import load_config, seed_everything
 
 
 logging.basicConfig(
@@ -18,6 +18,8 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 
+lr = 3e-4
+max_train_epochs = 1
 num_codes = 1024
 num_quantizers = 1
 is_multi_codebook = False
@@ -27,11 +29,14 @@ criterion = torch.nn.MSELoss()
 
 
 def update_global(args):
-    global num_codes, num_quantizers, is_multi_codebook
-    data_config = load_config(args.model_config)
-    num_codes = data_config.get('codebook_size', 1024)
-    num_quantizers = data_config.get('num_quantizers', 1)
+    global num_codes, num_quantizers, is_multi_codebook, lr, max_train_epochs
+    model_config = load_config(args.model_config)
+    num_codes = model_config.get('codebook_size', num_codes)
+    num_quantizers = model_config.get('num_quantizers', num_quantizers)
     is_multi_codebook = num_quantizers > 1
+    lr = model_config.get('lr', args.lr)
+    max_train_epochs = model_config.get('epoch', max_train_epochs)
+    return max_train_epochs > 1
 
 
 def save_checkpoint(model, optimizer, step, ckpt_path):
@@ -145,7 +150,7 @@ def train(model, args, train_loader, val_loader=None, max_train_epochs=1, alpha=
     
     for epoch in range(start_epoch, max_train_epochs):
         logging.info(f"Starting epoch {epoch}")
-        pbar = tqdm(train_loader, desc="Training")
+        pbar = tqdm(train_loader, desc=f"Epoch {epoch}")
         for batch in pbar:
             opt.zero_grad()
             x = batch[KEY_LM_HIDDEN_STATES].to(device)
@@ -154,10 +159,10 @@ def train(model, args, train_loader, val_loader=None, max_train_epochs=1, alpha=
 
             opt.step()
             active_percent = indices.unique().numel() / num_codes * 100
-            pbar.set_description(
-                f"rec loss: {rec_loss.item():.3f} | "
-                + f"cmt loss: {cmt_loss.item():.3f} | "
-                + f"active %: {active_percent:.3f}"
+            pbar.set_postfix(
+                rec_loss=f"{rec_loss.item():.3f}",
+                cmt_loss=f"{cmt_loss.item():.3f}",
+                active=f"{active_percent:.1f}%"
             )
 
             if writer:
@@ -174,7 +179,7 @@ def train(model, args, train_loader, val_loader=None, max_train_epochs=1, alpha=
                     save_checkpoint(model, opt, step, os.path.join(args.ckpt_dir, 'best_checkpoint.pt'))
                 else:
                     no_improvement_counter += 1
-                    if no_improvement_counter >= args.patience:
+                    if no_improvement_counter >= args.patience and args.patience > 0:
                         should_halt = True
                         break
                 if args.scheduler:
@@ -188,23 +193,27 @@ def train(model, args, train_loader, val_loader=None, max_train_epochs=1, alpha=
     print(f'{best_epoch=}')
 
 if __name__ == '__main__':
+    seed_everything(seed)
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_config", default='conf/data/example.yaml')
     parser.add_argument("--model_config", default='conf/models/vectorquantize.yaml')
     parser.add_argument("--ckpt_dir", default='./checkpoints')
     parser.add_argument("--test", action='store_true')
     parser.add_argument("--patience", type=int, default=0,
-                        help='setting patience>0 will enable infinite training epochs until early stopping.')
+                        help='setting patience>0 will enable early stopping.')
     parser.add_argument("--lr", type=float, default=3e-4)
     parser.add_argument("--scheduler", action='store_true', 
                         help='ReduceLRonPlateau')
     args = parser.parse_args()
     print(f"checkpoint dir: {args.ckpt_dir}")
     os.makedirs(args.ckpt_dir, exist_ok=True)
-    update_global(args)
+    is_max_epochs_set = update_global(args)
 
-    if args.patience > 0:
-        # series full run mode
+    if is_max_epochs_set:
+        # series full run mode with pre-set epochs
+        print(f'Full mode enabled with {max_train_epochs} epochs.')
+    elif args.patience > 0:
+        # infinite epochs until patience runs out
         max_train_epochs = 10001 # infinite
         print(f'Full mode enabled with early stopping patience {args.patience}.')
     else:
@@ -215,7 +224,6 @@ if __name__ == '__main__':
     val_dataloader = get_chunked_h5dataloader(config_path=args.data_config, split='validation')
     test_dataloader = get_chunked_h5dataloader(config_path=args.data_config, split='test')
 
-    torch.manual_seed(seed)
     model = get_model(args.model_config)
 
     writer = SummaryWriter(log_dir=os.path.join(args.ckpt_dir, 'logs'))

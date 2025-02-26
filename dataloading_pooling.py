@@ -1,6 +1,7 @@
 import math
 import os
 import h5py
+import numpy as np
 from torch.utils.data import Dataset, DataLoader
 import torch
 from constants import KEY_LM_HIDDEN_STATES, KEY_LM_INPUT_IDS, KEY_LM_LABELS
@@ -14,6 +15,7 @@ class HDF5Dataset(Dataset):
             h5_files_dir (str): 
             split (str): train/validation/test
         """
+        # import pdb; pdb.set_trace()
         h5_file_path = os.path.join(h5_files_dir, split+'.h5')
         self.h5_file = h5py.File(h5_file_path, 'r')
         
@@ -48,7 +50,22 @@ class ChunkedHDF5Dataset(HDF5Dataset):
     def __getitem__(self, idx):
         item = super().__getitem__(idx)
         hidden_states = item['hidden_states']
-        item['hidden_states'] = hidden_states[self.chunk_size-1::self.chunk_size, :]
+        # last
+        # item['hidden_states'] = hidden_states[self.chunk_size-1::self.chunk_size, :]
+
+        # mean pooling
+        assert hidden_states.shape[0] % self.chunk_size == 0, "行数不能被 chunk_size 整除"
+
+        # 重塑张量为 (num_chunks, chunk_size, num_features)
+        hidden_states_reshaped = hidden_states.view(-1, self.chunk_size, hidden_states.shape[1])
+
+        # 对每个 chunk 计算均值，axis=1 表示按第二个维度（即每个块的行）计算均值
+        pooled_hidden_states = hidden_states_reshaped.mean(dim=1)
+
+        # 结果的形状是 (256, 768)
+        item['hidden_states'] = pooled_hidden_states
+        # import pdb; pdb.set_trace()
+        
         return item
 
 
@@ -61,9 +78,12 @@ def get_chunked_h5dataloader(config_path, split, shuffle=None):
     dataloader = DataLoader(dataset, batch_size=config['batch_size'], shuffle=shuffle, num_workers=num_workers)
     return dataloader
 
+# dataloader = get_chunked_h5dataloader('conf/data/example.yaml', 'test')
 
 if __name__ == '__main__':
-    dataloader = get_chunked_h5dataloader('conf/data/example.yaml', 'test')
+    # import pdb; pdb.set_trace()
+    dataloader = get_chunked_h5dataloader('conf/data/example.yaml', 'train')
+    # dataloader = get_chunked_h5dataloader('conf/data/layer6_mlp.yaml', 'train')
 
     for batch in dataloader:
         input_ids = batch[KEY_LM_INPUT_IDS]

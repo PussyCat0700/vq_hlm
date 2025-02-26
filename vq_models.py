@@ -1,6 +1,13 @@
 from vector_quantize_pytorch import VectorQuantize, ResidualVQ, GroupedResidualVQ, RandomProjectionQuantizer, SimVQ, ResidualSimVQ, LFQ
 from custom_models.truthx import TruthXVAE
 from utils import load_config, count_parameters
+import logging
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
 
 
 def get_model(vae_config_path):
@@ -16,6 +23,7 @@ def get_model(vae_config_path):
             kmeans_init=True,
             rotation_trick=True,
             straight_through=False,
+            # use_cosine_sim=True,
         )
     elif vae_config['vq_type'] == 'ResidualVQ':
         vqvae = ResidualVQ(
@@ -23,6 +31,11 @@ def get_model(vae_config_path):
             codebook_dim=vae_config['codebook_dim'],
             num_quantizers = vae_config['num_quantizers'],      # specify number of quantizers
             codebook_size = vae_config['codebook_size'],    # codebook size
+            decay=0.8,
+            commitment_weight=1.,
+            kmeans_init=True,
+            rotation_trick=True,
+            straight_through=False,
         )
     elif vae_config['vq_type'] == 'TruthX_ResidualVQ':
         vqvae = TruthXVAE(vae_config)
@@ -60,8 +73,39 @@ def get_model(vae_config_path):
             entropy_loss_weight = 0.1,  # how much weight to place on entropy loss
             diversity_gamma = 1.        # within entropy loss, how much weight to give to diversity of codes, taken from https://arxiv.org/abs/1911.05894
         )
+    elif vae_config['vq_type'] == 'LearnableVQ': 
+        vqvae = VectorQuantize(
+            dim=vae_config['embedding_dim'],
+            codebook_dim=vae_config['codebook_dim'],
+            codebook_size=vae_config['codebook_size'],
+            decay=0.8,
+            commitment_weight=1.,
+            kmeans_init=True,
+            rotation_trick=True,
+            straight_through=False,
+            learnable_codebook=True,
+            ema_update=False,
+        )
+    elif vae_config['vq_type'] == 'LearnableRVQ': 
+        vqvae = ResidualVQ(
+            dim = vae_config['embedding_dim'],
+            codebook_dim=vae_config['codebook_dim'],
+            num_quantizers = vae_config['num_quantizers'],
+            codebook_size = vae_config['codebook_size'], 
+            decay=0.8,
+            commitment_weight=1.,
+            kmeans_init=True,
+            rotation_trick=True,
+            straight_through=False,
+            learnable_codebook=True,
+            ema_update=False,
+        )
+    else:
+        raise NotImplementedError('VQ type not implemented')
 
-    n_trainable, n_fixed = count_parameters(vqvae)
-    print(f'Model parameter stats for {vae_config["vq_type"]}')
-    print(f'{n_trainable / 1e6:.2f}M')
+    n_trainable, n_total = count_parameters(vqvae)
+    logging.info(f'Model parameter stats for {vae_config["vq_type"]}')
+    logging.info(f"Total parameters: {n_total / 1e6:.3f}M")
+    logging.info(f'Trainable parameters: {n_trainable / 1e6:.2f}M')
+    
     return vqvae

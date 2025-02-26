@@ -1,0 +1,23 @@
+do_train: True
+do_eval: True
+eval_strategy: 'epoch'
+num_train_epochs: 100
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 16
+per_device_eval_batch_size: 2
+logging_steps: 10
+save_steps: 500
+save_total_limit: 3
+learning_rate: 1.0e-3 # dont use 1e-3, use 1.0e-3
+lr_scheduler_type: "reduce_lr_on_plateau"
+max_grad_norm: 1
+warmup_steps: 1000
+weight_decay: 0.01
+adam_beta1: 0.9
+adam_beta2: 0.95
+ddp_find_unused_parameters: False
+# You can add your own training config here.
+# Refer to transformers.TrainingArguments for the full list of training arguments.
+# === not used param ===
+# output_dir: None # will cover --output_dir if specified, not recommended
+# logging_dir: None # if not specified, will default to --output_dir, not recommended

@@ -1,6 +1,8 @@
 torch
-yaml
+pyyaml
 h5py
 tqdm
 tensorboard
 matplotlib
+vector_quantize_pytorch
+gpustat
