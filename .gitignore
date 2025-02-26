@@ -146,3 +146,12 @@ cython_debug/
 
 exp/
 logs/
+*.json
+*.out
+*.err
+*.yaml
+**logs**
+*.ckpt
+*.pt
+*.csv
+*.png

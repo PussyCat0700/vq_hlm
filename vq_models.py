@@ -1,5 +1,13 @@
 from vector_quantize_pytorch import VectorQuantize, ResidualVQ, GroupedResidualVQ, RandomProjectionQuantizer, SimVQ, ResidualSimVQ, LFQ
-from utils import load_config
+from custom_models.truthx import TruthXVAE
+from utils import load_config, count_parameters
+import logging
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
 
 
 def get_model(vae_config_path):
@@ -29,6 +37,8 @@ def get_model(vae_config_path):
             rotation_trick=True,
             straight_through=False,
         )
+    elif vae_config['vq_type'] == 'TruthX_ResidualVQ':
+        vqvae = TruthXVAE(vae_config)
     elif vae_config['vq_type'] == 'GroupedResidualVQ':  
         vqvae = GroupedResidualVQ(
             dim = vae_config['embedding_dim'],
@@ -93,4 +103,9 @@ def get_model(vae_config_path):
     else:
         raise NotImplementedError('VQ type not implemented')
 
+    n_trainable, n_total = count_parameters(vqvae)
+    logging.info(f'Model parameter stats for {vae_config["vq_type"]}')
+    logging.info(f"Total parameters: {n_total / 1e6:.3f}M")
+    logging.info(f'Trainable parameters: {n_trainable / 1e6:.2f}M')
+    
     return vqvae

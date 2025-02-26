@@ -1,0 +1,5 @@
+h5_file_path: "/home/yfliu/datasets_home/vqds/wikitext103_gpt2finetuned/"
+batch_size: 128
+seq_length: 1024
+hidden_size: 768
+chunk_size: 64

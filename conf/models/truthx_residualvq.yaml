@@ -1,0 +1,4 @@
+vq_type: "TruthX_ResidualVQ"
+embedding_dim: 768
+codebook_size: 1024
+num_quantizers: 4
