@@ -1,10 +1,11 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Callable, Any
-import os
-import glob
-import tqdm
+from typing import Callable, Any, Dict, Tuple, Union
+from tqdm import tqdm
+
+from constants import KEY_LM_HIDDEN_STATES
+from dataloading import get_chunked_h5dataloader
 
 
 # 定义LN函数
@@ -43,7 +44,7 @@ class Autoencoder(nn.Module):
         self.decoder = nn.Linear(n_latents, n_inputs, bias=False)
         self.normalize = normalize
 
-    def preprocess(self, x: torch.Tensor) -> tuple[torch.Tensor, dict[str, Any]]:
+    def preprocess(self, x: torch.Tensor) -> Tuple[torch.Tensor, Dict[str, Any]]:
         if not self.normalize:
             return x, dict()
         x, mu, std = LN(x)
@@ -53,13 +54,13 @@ class Autoencoder(nn.Module):
         x = x - self.pre_bias
         return F.linear(x, self.encoder.weight, self.latent_bias)
 
-    def decode(self, latents: torch.Tensor, info: dict[str, Any] | None = None) -> torch.Tensor:
+    def decode(self, latents: torch.Tensor, info: Union[Dict[str, Any], None] = None) -> torch.Tensor:
         ret = self.decoder(latents) + self.pre_bias
         if self.normalize and info:
             ret = ret * info["std"] + info["mu"]
         return ret
 
-    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         x, info = self.preprocess(x)
         latents_pre_act = self.encode_pre_act(x)
         latents = self.activation(latents_pre_act)
@@ -67,7 +68,7 @@ class Autoencoder(nn.Module):
         return latents_pre_act, latents, recons
     
     @classmethod
-    def from_state_dict(cls, state_dict: dict[str, torch.Tensor]) -> "Autoencoder":
+    def from_state_dict(cls, state_dict: Dict[str, torch.Tensor]) -> "Autoencoder":
         # 从权重文件确定维度
         if "W_enc" in state_dict:
             w_enc = state_dict["W_enc"]
@@ -125,7 +126,7 @@ class Autoencoder(nn.Module):
         
         return autoencoder
 
-def evaluate_normalized_mse(model_path,hidden_states_dir,layer_num=5):
+def evaluate_normalized_mse(model_path, config_file, layer_num=5):
     # 加载模型权重
     
     state_dict = torch.load(f'{model_path}/sae_weights.pt')
@@ -135,15 +136,10 @@ def evaluate_normalized_mse(model_path,hidden_states_dir,layer_num=5):
     model = Autoencoder.from_state_dict(state_dict)
     print("已创建归一化SAE模型")
     
-    # 找到所有layer_5.pt隐藏状态文件
-    
-    layer_files = glob.glob(f"{hidden_states_dir}*layer_{layer_num}.pt")
-    
-    if not layer_files:
-        print("未找到任何layer_5.pt文件")
-        return 0
-    
-    print(f"找到{len(layer_files)}个文件待处理")
+    dataloader = get_chunked_h5dataloader(
+        config_path=config_file,
+        split='test',
+    )
     
     # 计算总MSE和样本数
     total_mse = 0.0
@@ -151,9 +147,9 @@ def evaluate_normalized_mse(model_path,hidden_states_dir,layer_num=5):
     
     # 使用tqdm创建进度条
     with torch.no_grad():
-        for file_path in tqdm(layer_files, desc="处理文件进度", unit="文件"):
+        for batch in tqdm(dataloader):
             # 加载隐藏状态
-            hidden_states = torch.load(file_path)
+            hidden_states = batch[KEY_LM_HIDDEN_STATES]
             
             # 前向传播
             _, _, reconstructed = model(hidden_states)
@@ -172,6 +168,10 @@ def evaluate_normalized_mse(model_path,hidden_states_dir,layer_num=5):
     return avg_mse
 
 if __name__ == "__main__":
-    model_path = f'/root/filesystem/modelGPT2/sparse_autoencoder/sae_pt/v5_32k_layer_5.pt'
-    hidden_states_dir = "/root/filesystem/modelGPT2/sparse_autoencoder/hidden_states/"
-    evaluate_normalized_mse(layer_num=5,hidden_states_dir=hidden_states_dir)
+    model_path = f'/data1/yfliu/vqhlm/pretrained_ckpts/sae/v5_32k_layer_5.pt'  # It is a directory named with postfix `.pt`
+    config_file = 'conf/data/example.yaml'
+    evaluate_normalized_mse(
+        model_path=model_path,
+        layer_num=5,
+        config_file=config_file,
+        )
