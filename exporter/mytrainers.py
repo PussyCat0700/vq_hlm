@@ -15,7 +15,8 @@ import h5py
 import os
 
 
-SAVE_DIR = "/home/yfliu/datasets_home/vqds/openai_gpt2/"  # HARD CODED
+SAVE_DIR = "/home/yfliu/datasets_home/vqds/openai_gpt2_v2/"  # HARD CODED
+os.makedirs(SAVE_DIR, exist_ok=True)
 logger = logging.get_logger(__name__)
 
 
@@ -50,9 +51,7 @@ class ExportTrainer(Trainer):
         self.input_ids_dataset[index] = input_ids.cpu().numpy()
         self.labels_dataset[index] = labels.cpu().numpy()
 
-    def hook_fn(self, module, input, output):
-        hidden_states = output[0]  # (batch_size, seq_length, hidden_size)
-
+    def save_fn(self, hidden_states):
         batch_size = hidden_states.size(0)
         seq_length = hidden_states.size(1)
         hidden_size = hidden_states.size(2)
@@ -65,8 +64,6 @@ class ExportTrainer(Trainer):
 
             # 保存数据到 HDF5 文件
             self.save_to_hdf5(batch_idx, hidden_states[batch_idx], input_ids, labels)
-
-        return output
     
     def evaluate(
         self,
@@ -395,10 +392,11 @@ class ExportTrainer(Trainer):
         """
         labels = None
         # from transformers.models.gpt2.modeling_gpt2 import GPT2LMHeadModel
+        inputs['output_hidden_states'] = True
         self.inputs = inputs
-        hook = model.transformer.h[5].register_forward_hook(partial(self.hook_fn))
         outputs = model(**inputs)
-        hook.remove()
+        hs = outputs.hidden_states[5]
+        self.save_fn(hs)
         if labels is not None:
             raise NotImplementedError()
         else:
