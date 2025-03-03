@@ -169,7 +169,7 @@ def evaluate_normalized_mse(model_path, config_file, layer_num=5):
 
 if __name__ == "__main__":
     model_path = f'/data1/yfliu/vqhlm/pretrained_ckpts/sae/v5_32k_layer_5.pt'  # It is a directory named with postfix `.pt`
-    config_file = 'conf/data/example.yaml'
+    config_file = 'conf/data/example_openai_pt.yaml'
     evaluate_normalized_mse(
         model_path=model_path,
         layer_num=5,

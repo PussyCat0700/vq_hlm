@@ -12,7 +12,7 @@
 
 echo doing $1
 
-MODEL=neulab/gpt2-finetuned-wikitext103
+MODEL=gpt2
 # available splits: train/validation/test
 python -u export_hs.py \
   --model_name_or_path ${MODEL} \
