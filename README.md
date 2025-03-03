@@ -31,6 +31,8 @@
 
 # Change Log
 
+- [25.03.03] 新增SAE Loss对比
+    - `sparse_autoencoder_mse.py`
 
 - [24.12.22]
     - 新增训练自动续点续传功能
