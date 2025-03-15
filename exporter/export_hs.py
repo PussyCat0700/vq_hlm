@@ -264,9 +264,10 @@ def main():
     if data_args.dataset_name is not None:
         # Downloading and loading a dataset from the hub.
         raw_datasets = load_dataset(
-            data_args.dataset_name, data_args.dataset_config_name, cache_dir=model_args.cache_dir
+            data_args.dataset_name,
         )
         if "validation" not in raw_datasets.keys():
+            """
             raw_datasets["validation"] = load_dataset(
                 data_args.dataset_name,
                 data_args.dataset_config_name,
@@ -279,6 +280,11 @@ def main():
                 split=f"train[{data_args.validation_split_percentage}%:]",
                 cache_dir=model_args.cache_dir,
             )
+            """
+            # for openwebtext only. Wikitext already has val split.
+            raw_datasets = raw_datasets["train"].train_test_split(test_size=0.0005, seed=2357, shuffle=True)
+            raw_datasets['validation'] = raw_datasets.pop('test') # rename the test split to val
+            print(f'dataset splitted as: {raw_datasets}')
     else:
         data_files = {}
         dataset_args = {}

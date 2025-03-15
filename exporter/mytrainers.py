@@ -4,7 +4,6 @@ import time
 import numpy as np
 from transformers import Trainer
 from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES
-from transformers.trainer import _is_peft_model
 from transformers.trainer_pt_utils import EvalLoopContainer, IterableDatasetShard, distributed_concat, find_batch_size, nested_detach
 from transformers.trainer_utils import EvalLoopOutput, EvalPrediction, denumpify_detensorize, has_length, speed_metrics
 from transformers.utils import is_sagemaker_mp_enabled, logging
@@ -15,7 +14,7 @@ import h5py
 import os
 
 
-SAVE_DIR = "/home/yfliu/datasets_home/vqds/openai_gpt2_v2/"  # HARD CODED
+SAVE_DIR = "/home/yfliu/datasets_home/vqds/openwebtext_openai_gpt2/"  # HARD CODED
 os.makedirs(SAVE_DIR, exist_ok=True)
 logger = logging.get_logger(__name__)
 
